@@ -38,7 +38,11 @@ def create_app(config_class=Config):
             
             data = request.get_json()     # status code
             return jsonify({'data': data}), 201
-    
+
+
+
+
+    # Add ressources to the app
     api.add_resource(Hello, '/')
 
     return app
