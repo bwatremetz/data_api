@@ -13,6 +13,7 @@ Returns:
 from flask import Flask, jsonify, request
 from flask_restful import Resource, Api
 from config import Config
+from app.price_model import get_price_day_ahead
 
 
 def create_app(config_class=Config):
@@ -39,10 +40,16 @@ def create_app(config_class=Config):
             data = request.get_json()     # status code
             return jsonify({'data': data}), 201
 
+    class Price_day_ahead(Resource):
 
+        def get(self):
+
+            data = get_price_day_ahead()
+            return data.to_json(orient='records', date_format='iso')
 
 
     # Add ressources to the app
     api.add_resource(Hello, '/')
+    api.add_resource(Price_day_ahead, '/Price')
 
     return app
