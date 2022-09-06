@@ -1,55 +1,21 @@
-"""Main app file. Link all the module in a single Flask app
-Load all the modules and dependencies together in a single Flask web application
-Order is important here. Load app and dependencies first, then the modules.
-Dash modules are loaded as objects, not self standing application, so it can interact witht the 
-rest of the application
-
-dependencies: 
-
-Returns:
-    (Flask application): main flask application
-"""
-
-from flask import Flask, jsonify, request
-from flask_restful import Resource, Api
+from apiflask import APIFlask, Schema, abort
+from apiflask.fields import Integer, String
 from config import Config
-from app.price_model import get_price_day_ahead
 
 
 def create_app(config_class=Config):
+    app = APIFlask(__name__, title='PowerApp', version='0.1')
 
-    app = Flask(__name__)
-    app.config.from_object(config_class)
+    with app.app_context():
+        from app.power_model.routes import power_bp 
 
-    # creating an API object
-    api = Api(app)
+        # Register Blueprints
+        app.register_blueprint(power_bp, url_prefix='/power')
 
-    # Create route class
-    class Hello(Resource):
-  
-        # corresponds to the GET request.
-        # this function is called whenever there
-        # is a GET request for this resource
-        def get(self):
-    
-            return jsonify({'message': 'hello world'})
-    
-        # Corresponds to POST request
-        def post(self):
-            
-            data = request.get_json()     # status code
-            return jsonify({'data': data}), 201
-
-    class Price_day_ahead(Resource):
-
-        def get(self):
-
-            data = get_price_day_ahead()
-            return data.to_json(orient='records', date_format='iso')
+        @app.get('/')
+        def say_hello():
+            # returning a dict or list equals to use jsonify()
+            return {'message': 'Hello!'}
 
 
-    # Add ressources to the app
-    api.add_resource(Hello, '/')
-    api.add_resource(Price_day_ahead, '/Price')
-
-    return app
+        return app
