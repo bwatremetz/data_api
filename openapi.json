@@ -1,0 +1,49 @@
+{
+  "info": {
+    "title": "PowerApp",
+    "version": "0.1"
+  },
+  "tags": [
+    {
+      "name": "Power_Bp"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "summary": "Say Hello"
+      }
+    },
+    "/power/": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful response"
+          }
+        },
+        "tags": [
+          "Power_Bp"
+        ],
+        "summary": "Get Power Prices"
+      }
+    }
+  },
+  "openapi": "3.0.3"
+}
