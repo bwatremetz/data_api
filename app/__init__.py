@@ -1,11 +1,13 @@
 from apiflask import APIFlask, Schema, abort
 from apiflask.fields import Integer, String
 from config import Config
+import os
 
 
 def create_app(config_class=Config):
     app = APIFlask(__name__, title='PowerApp', version='0.1')
-    app.config['LOCAL_SPEC_PATH'] = 'openapi.json'   # run flask spec to write the OpenAPI specification file
+    app.config['SYNC_LOCAL_SPEC'] = True
+    app.config['LOCAL_SPEC_PATH'] = os.path.join(app.root_path, 'openapi.json')   # run flask spec to write the OpenAPI specification file
 
     with app.app_context():
         from app.power_model.routes import power_bp 
