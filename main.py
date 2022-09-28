@@ -11,5 +11,6 @@ async def root():
 
 @app.get("/day_ahead")
 async def day_ahead():
-    data = get_price_day_ahead()
+    data = get_price_day_ahead('20220928', '20220930').reset_index()
+    data.columns = ['date','price']
     return data.to_json(orient='records', date_format='iso')
