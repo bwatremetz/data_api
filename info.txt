@@ -1,0 +1,18 @@
+Install following 
+https://www.vultr.com/docs/how-to-deploy-fastapi-applications-with-gunicorn-and-nginx-on-ubuntu-20-04/
+https://www.codementor.io/@collinsonyemaobi/deploy-a-secure-fastapi-app-on-ubuntu-20-04-using-python3-10-certbot-nginx-and-gunicorn-1spdjl4suw
+
+
+repertories mod:
+sudo chown -R $USER:$USER /var/www/data_api
+sudo chmod -R 755 /var/www/data_api/
+
+sudo chown -R $USER:$USER /var/www/log/data_api
+sudo chmod -R 755 /var/www/log/data_api
+
+data_api service created and enabled in /etc/systemd/system/data_api.service
+data_api (gunicorn) runs on 0.0.0.0:8080
+NGINX pass gunicorn to 8000 port
+
+TODO:
+configure gunicorn with config file
