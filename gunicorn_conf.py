@@ -1,3 +1,6 @@
+# Gunicorn serves this app on port 8080
+# Nginx picks up and serves on port 8000 (see nginx configuration)
+
 from multiprocessing import cpu_count
 
 # Socket Path
