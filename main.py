@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from functools import lru_cache
 from fastapi.security.api_key import APIKeyQuery, APIKeyCookie, APIKeyHeader, APIKey
-from app.power_model.price_model import get_price_day_ahead
+from app.power_model.price_model import get_price_day_ahead, get_price_day_ahead_split_nok
 from datetime import datetime, timedelta
 import auth
 
@@ -27,6 +27,16 @@ async def root():
 # API_KEY comes with parameter or header access_token
 @app.get("/day_ahead_today")
 async def day_ahead(api_key: APIKey = Depends(auth.get_api_key), vat:bool=True, nettleie:bool=False):
+    """_summary_
+
+    Args:
+        api_key (APIKey, optional): _description_. Defaults to Depends(auth.get_api_key).
+        vat (bool, optional): _description_. Defaults to True.
+        nettleie (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
 
     today = datetime.today().strftime('%Y%m%d')
     dt_tom = datetime.today() + timedelta(days=2)  # last day is not included in request
@@ -42,3 +52,22 @@ async def day_ahead(api_key: APIKey = Depends(auth.get_api_key), vat:bool=True, 
         
     data.columns = ['date','price']
     return data.to_json(orient='records', date_format='iso')
+
+
+@app.get("/day_ahead_today_split")
+async def day_ahead_details(api_key: APIKey = Depends(auth.get_api_key)):
+    """_summary_
+
+    Args:
+        api_key (APIKey, optional): _description_. Defaults to Depends(auth.get_api_key).
+    """
+
+    today = datetime.today().strftime('%Y%m%d')
+    dt_tom = datetime.today() + timedelta(days=2)  # last day is not included in request
+    tomorrow = dt_tom.strftime('%Y%m%d')
+
+    data = get_price_day_ahead_split_nok(today, tomorrow, vat_rate=0.25).reset_index()
+
+    return data.to_json(orient='records', date_format='iso')
+
+
