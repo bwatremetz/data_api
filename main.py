@@ -66,6 +66,7 @@ async def day_ahead_details(api_key: APIKey = Depends(auth.get_api_key)):
     tomorrow = dt_tom.strftime('%Y%m%d')
 
     data = get_price_day_ahead_split_nok(today, tomorrow, vat_rate=0.25).reset_index()
+    data.columns = ['date','net_price', 'vat', 'nettleie']
 
     return data.to_json(orient='records', date_format='iso')
 
