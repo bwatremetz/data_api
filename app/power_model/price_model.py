@@ -2,6 +2,7 @@ import pandas as pd
 import requests
 from entsoe import EntsoePandasClient
 from config import Settings, get_settings
+from cachetools import TTLCache, cached
 
 # Move API key and URL to config secrets
 URL_NOK = 'https://data.norges-bank.no/api/data/EXR/B.EUR.NOK.SP?format=sdmx-json&lastNObservations=1&locale=no'
@@ -91,9 +92,9 @@ def get_price_day_ahead_split_nok(start_day:str, end_day:str, vat_rate:float):
     return prices_kwh.set_index('index')
 
 
-# add cache (10 min) to avoid multiple queries
+@cached(cache=TTLCache(maxsize=1024, ttl=600))     # cache data for 10min
 def get_price_day_ahead_EUR(start_day: str, end_day: str):
-    """_summary_
+    """Return power prices from ENTSOE in EUR/kWh
 
     Args:
         start_day (str): start date format yyyymmdd @ 00:00
