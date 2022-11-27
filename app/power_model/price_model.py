@@ -1,10 +1,10 @@
 import pandas as pd
 import requests
 from entsoe import EntsoePandasClient
+from config import Settings, get_settings
 
 # Move API key and URL to config secrets
 URL_NOK = 'https://data.norges-bank.no/api/data/EXR/B.EUR.NOK.SP?format=sdmx-json&lastNObservations=1&locale=no'
-API_KEY='acf71bdf-69df-460d-8d08-68fcbce55337'
 
 # Create region dictionnary
 REGION = '10YNO-2--------T' # Norway NO2
@@ -112,7 +112,7 @@ def get_price_day_ahead_EUR(start_day: str, end_day: str):
         raise
     
     # Create Entsoe client
-    clientpd = EntsoePandasClient(API_KEY)
+    clientpd = EntsoePandasClient(get_settings().ENTSOE_API_KEY)
     region = REGION 
 
     # load prices EUR/MWh --> EUR/kWh

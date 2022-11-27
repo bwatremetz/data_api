@@ -5,7 +5,7 @@ from app.power_model.price_model import get_price_day_ahead, get_price_day_ahead
 from datetime import datetime, timedelta
 import auth
 
-from config import Settings
+from config import Settings, get_settings
 
 # Use Python 3.10 and above
 # use >uvicorn main:app --reload 
@@ -16,7 +16,6 @@ from config import Settings
 
 
 app = FastAPI()
-
 
 # Open Route
 @app.get("/")
