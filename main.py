@@ -26,25 +26,25 @@ async def root():
 # API_KEY comes with parameter or header access_token
 @app.get("/day_ahead_today")
 async def day_ahead(api_key: APIKey = Depends(auth.get_api_key), vat:bool=True, nettleie:bool=False):
-    """_summary_
+    """ Get total prices fortoday and tomorrow
 
     Args:
         api_key (APIKey, optional): _description_. Defaults to Depends(auth.get_api_key).
-        vat (bool, optional): _description_. Defaults to True.
-        nettleie (bool, optional): _description_. Defaults to False.
+        vat (bool, optional): Add VAT to the price. Defaults to True.
+        nettleie (bool, optional): add nettleie to the price. Defaults to False.
 
     Returns:
-        _type_: _description_
+        JSON string: prices vs time for today and tomorrow with specified details
     """
 
-    today = datetime.today().strftime('%Y%m%d')
-    dt_tom = datetime.today() + timedelta(days=2)  # last day is not included in request
+    today = datetime.now().strftime('%Y%m%d')
+    dt_tom = datetime.now() + timedelta(days=2)  # last day is not included in request
     tomorrow = dt_tom.strftime('%Y%m%d')
 
     # serves today and tomorrow prices with vat in nok.
     if vat and nettleie:
         data = get_price_day_ahead(today, tomorrow, vat=True, vat_rate=0.25, nettleie=True).reset_index()
-    elif vat and not nettleie:
+    elif vat:
         data = get_price_day_ahead(today, tomorrow, vat=True, vat_rate=0.25, nettleie=False).reset_index()
     else:
         data = get_price_day_ahead(today, tomorrow, vat=False, nettleie=False).reset_index()
@@ -55,14 +55,14 @@ async def day_ahead(api_key: APIKey = Depends(auth.get_api_key), vat:bool=True, 
 
 @app.get("/day_ahead_today_split")
 async def day_ahead_details(api_key: APIKey = Depends(auth.get_api_key)):
-    """_summary_
+    """Get day ahead detailled prices for today and tomorrow (with vat and nettleie)
 
     Args:
-        api_key (APIKey, optional): _description_. Defaults to Depends(auth.get_api_key).
+        api_key (APIKey, optional): API key. Defaults to Depends(auth.get_api_key).
     """
 
-    today = datetime.today().strftime('%Y%m%d')
-    dt_tom = datetime.today() + timedelta(days=2)  # last day is not included in request
+    today = datetime.now().strftime('%Y%m%d')
+    dt_tom = datetime.now() + timedelta(days=2)  # last day is not included in request
     tomorrow = dt_tom.strftime('%Y%m%d')
 
     data = get_price_day_ahead_split_nok(today, tomorrow, vat_rate=0.25).reset_index()
@@ -71,3 +71,17 @@ async def day_ahead_details(api_key: APIKey = Depends(auth.get_api_key)):
     return data.to_json(orient='records', date_format='iso')
 
 
+@app.get("/day_ahead_period_split")
+async def day_ahead_period_details(start_day:str, end_day:str, api_key: APIKey = Depends(auth.get_api_key)):
+    """Get day ahead detailled prices for a given period (with vat and nettleie)
+
+    Args:
+        start_day: first day of the period, format yyyymmdd
+        end_day: last day of the period, format yyyymmdd
+        api_key (APIKey, optional): API key. Defaults to Depends(auth.get_api_key).
+    """
+
+    data = get_price_day_ahead_split_nok(start_day=start_day, end_day=end_day, vat_rate=0.25).reset_index()
+    data.columns = ['date','net_price', 'vat', 'nettleie']
+
+    return data.to_json(orient='records', date_format='iso')

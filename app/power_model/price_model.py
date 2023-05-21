@@ -12,7 +12,6 @@ REGION = '10YNO-2--------T' # Norway NO2
 time_zone = 'Europe/Oslo'   # localize the data in given timezone
 
 
-
 def get_price_day_ahead(start_day:str, end_day:str, val:str='NOK', vat:bool=True, vat_rate:float=0.25, nettleie:bool=True)->pd.Series:
     """Load prices day ahead from Entsoe in val/kWh
 
@@ -63,33 +62,37 @@ def get_price_day_ahead_split_nok(start_day:str, end_day:str, vat_rate:float):
         vat_rate (float): vat rate for vat calculation
 
     Returns:
-        pd.dataframe: dataframe index = datetime - unlocalized timezone, columns [net_prices, vat, nettleie]
+        pd.dataframe: dataframe index (time) = datetime - unlocalized timezone, columns [net_prices, vat, nettleie]
     """
 
+    # Get EUR prices
     prices = get_price_day_ahead_EUR(start_day, end_day)
+    prices = prices.reset_index()
+    prices.columns = ['time', 'price_EUR']
+    prices['date'] = prices['time'].dt.normalize().dt.tz_localize(None)
 
-    # We use the last known exchange rate for conversion.
-    # TODO: load rate historical values for period longer than 1 day 
-    exch_rate, _ = get_last_NOK_exchange_rate()
+    # Get exchange rates
+    exch_rate= get_NOK_exchange_rate(start_day, end_day)
+    exch_rate = exch_rate.reset_index()
+    exch_rate.columns = ['date', 'ex_rate']
 
-    # get net prices
-    prices_kwh = prices*exch_rate
-    
+    # get net prices in a dataframe by merging on dates
+    prices = prices.merge(right=exch_rate, on='date')
+    prices['price_NOK'] = prices['price_EUR']*prices['ex_rate']
+
     # get vat
-    vat = prices_kwh*vat_rate
+    prices['vat'] = prices['price_NOK']*vat_rate
 
-    # form dataframe
-    prices_kwh = pd.concat([prices_kwh,vat], axis=1)
-    prices_kwh.columns = ['net_prices', 'vat']
-    prices_kwh.reset_index(inplace=True)
+    prices = prices[['time', 'price_NOK', 'vat']].copy()
+    prices = prices.rename(columns={'price_NOK': 'net_prices'})
 
     # remove timezone from datetie object
-    prices_kwh['index'] = prices_kwh['index'].dt.tz_localize(None)
+    prices['time'] = prices['time'].dt.tz_localize(None)
 
     # get nettleie
-    prices_kwh['nettleie'] = get_nettleie(prices_kwh['index'].dt.hour)
+    prices['nettleie'] = get_nettleie(prices['time'].dt.hour)
 
-    return prices_kwh.set_index('index')
+    return prices.set_index('time')
 
 
 @cached(cache=TTLCache(maxsize=1024, ttl=600))     # cache data for 10min
@@ -117,9 +120,60 @@ def get_price_day_ahead_EUR(start_day: str, end_day: str):
     region = REGION 
 
     # load prices EUR/MWh --> EUR/kWh
-    df = clientpd.query_day_ahead_prices(region, start=start, end=end) / 1000
+    return clientpd.query_day_ahead_prices(region, start=start, end=end) / 1000
 
-    return df
+
+# @cached(cache=TTLCache(maxsize=1024, ttl=600)) 
+def get_NOK_exchange_rate(start_day:str, end_day:str)->pd.Series:
+    """Get daily EUR/NOK exchange rate between 2 dates
+
+    Args:
+        start_day (str): start date format yyyymmdd @ 00:00
+        end_day (str): end date format yyyymmdd @ 00:00
+
+    Returns:
+        pd.Series: exchange rate, date index
+    """
+
+    try:
+        start = pd.Timestamp(start_day, tz=time_zone).date()
+        end = pd.Timestamp(end_day, tz=time_zone).date()
+    except ValueError:
+        print(f'parameters are string convertible to pandas TimeStamp. Received parameters are {start_day} and {end_day}')
+        raise
+    except Exception:
+        raise
+    
+    URL_temp = f'https://data.norges-bank.no/api/data/EXR/B.EUR.NOK.SP?startPeriod={start.isoformat()}&endPeriod={end.isoformat()}&format=sdmx-json&locale=no'
+    response = requests.get(URL_temp)
+
+    if response.status_code == 200: 
+        jj = response.json()
+
+        # exchange rates
+        ex = jj['data']['dataSets'][0]['series']['0:0:0:0']['observations']
+        ex = pd.DataFrame(ex).astype(float).T.reset_index()
+
+        # dates
+        ids = pd.DataFrame(jj['data']['structure']['dimensions']['observation'][0]['values']).reset_index()
+        ids['id'] = pd.to_datetime(ids['id'])
+
+        # concat
+        ex = pd.concat([ids,ex], axis=1).drop(columns=['index', 'start', 'end', 'name'])
+        ex.columns=['date', 'ex_rate']
+
+        # get potential missing dates (start / end of the vector)
+        vec = pd.DataFrame(index=pd.date_range(start, end, freq='D'))
+        vec = pd.concat([vec, ex.set_index('date')], axis=1)
+        vec = vec.fillna(method='ffill').fillna(method='bfill')
+
+    else:
+        # Get last available code and deliver a constant vector
+        exch_rate, _ = get_last_NOK_exchange_rate()
+        vec = pd.DataFrame(index=pd.date_range(start, end, freq='D'))
+        vec['ex_rate'] = exch_rate
+
+    return vec
 
 
 def get_last_NOK_exchange_rate():
@@ -136,6 +190,7 @@ def get_last_NOK_exchange_rate():
     exch_rate_time = pd.to_datetime(jj['meta']['prepared'], utc=True).tz_convert('Europe/Oslo')
 
     return exch_rate, exch_rate_time
+
 
 
 def get_nettleie(hour)->float:
